@@ -1,7 +1,12 @@
 // pages/modern.tsx
 import { useEffect, useState } from "react";
 import { getReservations } from "../lib/api";
-import dayjs from "dayjs";
+import { Calendar, momentLocalizer } from "react-big-calendar";
+import { parseISO } from "date-fns";
+import "react-big-calendar/lib/css/react-big-calendar.css"; // le style par défaut
+import { fr } from "date-fns/locale";
+import { format, parse, startOfWeek, getDay } from "date-fns";
+import { DateLocalizer } from "react-big-calendar";
 
 interface Reservation {
   id: number;
@@ -10,38 +15,41 @@ interface Reservation {
   reference: string;
 }
 
+const localizer: DateLocalizer = {
+  format,
+  parse,
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+  getDay,
+  locales: { fr },
+};
+
 export default function ModernPage() {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    getReservations().then(setReservations);
+    getReservations().then((data) => {
+      const formatted = data.map((res: Reservation) => ({
+        id: res.id,
+        title: `#${res.reference}`,
+        start: parseISO(res.start_at),
+        end: parseISO(res.end_at),
+        allDay: false,
+      }));
+      setEvents(formatted);
+    });
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-10 text-blue-700"> Réservations Modernes</h1>
-
-        {reservations.length === 0 ? (
-          <div className="text-center text-gray-500">Aucune réservation disponible.</div>
-        ) : (
-          <div className="grid gap-6">
-            {reservations.map((res) => (
-              <div key={res.id} className="bg-white shadow-lg rounded-xl p-6 border-l-4 border-blue-500">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-800">Réservation #{res.id}</h2>
-                  <span className="text-sm text-gray-400">{res.reference}</span>
-                </div>
-                <p className="mt-2 text-sm text-gray-600">
-                  <strong>Du :</strong> {dayjs(res.start_at).format("DD MMM YYYY - HH:mm")}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Au :</strong> {dayjs(res.end_at).format("DD MMM YYYY - HH:mm")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="min-h-screen bg-gray-100 py-10 px-4">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold text-center text-blue-700 mb-6">📅 Réservations</h1>
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: 600, backgroundColor: "white", borderRadius: "8px", padding: "10px" }}
+        />
       </div>
     </div>
   );
